@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: simpsons-quote-s3
+  namespace: argo
+spec:
+  entrypoint: simpsons-quote
+  templates:
+    - name: simpsons-quote
+      script:
+        image: broadinstitute/python-requests
+        command: [ python ]
+        source: |
+          import json
+          import requests
+
+          #Make curl request and parse JSON data
+          response = requests.get("https://thesimpsonsquoteapi.glitch.me/quotes")
+          data = response.json()[0]
+          image = data["image"]
+
+          #Create a new local JSON file
+          output = {
+              "quote": data["quote"],
+              "character": data["character"],
+              "image": image,
+              "characterDirection": data["characterDirection"]
+          }
+
+          with open("/tmp/output.json", "w") as file:
+              json.dump(output, file)
+
+          #Open the file and parse the image to a new file
+          with open("/tmp/output.json") as file:
+            data = json.load(file)
+
+            image_url = data["image"]
+
+            response = requests.get(image_url)
+          with open("/tmp/image.png", "wb") as file:
+            file.write(response.content)
+
+      outputs:
+        artifacts:
+          - name: image
+            path: /tmp/image.png
+            s3:
+              endpoint: s3.amazonaws.com
+              bucket: argo-example545-bucket
+              region: us-west-2
+              key: simpsons/simpsons_image.jpg.tgz
+              accessKeySecret:
+                name: my-s3-credentials
+                key: accessKey
+              secretKeySecret:
+                name: my-s3-credentials
+                key: secretKey
