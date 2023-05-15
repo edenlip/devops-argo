@@ -25,8 +25,6 @@ terraform {
 
 provider "aws" {
   region = local.aws_region
-  access_key = "AKIA3MEQP3GG3AXWO6MH"
-  secret_key = "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"
 }
 
 provider "kubernetes" {
